@@ -1,0 +1,529 @@
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.js"></script>
+<h1>Калькулятор поставки</h1>
+<div id="cables-calc">
+    <calculator v-for="(product,index) in products"  :reelhref='reelhref' :key="product.uniqid" :products="products" :index="index" :general="general"></calculator>
+    <a class="btn btn-default btn-yellow add-cable-calc" v-on:click="addCable">Добавить кабель</a>
+    <div v-if="general.volume != ''" class="calc-result-block">
+        <h3>Итоги</h3>
+        <div class="general-table">
+            <p>Общая длина кабеля: {{general.length}} км</p>
+            <p>Общий вес кабеля: {{general.weight}} кг</p>
+            <p>Вес нетто: {{general.net}} кг</p>
+            <p>Количество барабанов: {{general.number}}</p>
+            <p>Общий вес барабанов: {{general.reelWeight}} кг</p>
+            <p>Вес брутто: {{general.gross}} кг</p>
+        </div>
+        <table class="calc-result-table">
+            <thead>
+            <td class="long">Кабель</td>
+            <td class="long">Кол-во барабанов, шт</td>
+            <td>Объем, м3</td>
+            <td class="long">Общий вес барабанов, кг</td>
+            <td>Вес брутто, кг</td>
+            </thead>
+            <tr v-for="(cable,key) in general.cables">
+                <td class="long">{{cable.cableName}}</td>
+                <td class="long">{{cable.number}}</td>
+                <td>{{cable.volume}}</td>
+                <td class="long">{{cable.weight}}</td>
+                <td class="long">{{cable.gross}}</td>
+            </tr>
+        </table>
+        <form id="sendInfoForm" method="post" action="?step=2" name="sendInfoForm">
+          <input type="hidden" name="weight" :value="general.gross">
+          <input type="hidden" name="volume" :value="general.volume">
+          <button type="submit" class="btn btn-default btn-yellow send-cables">Рассчитать доставку</button>
+        </form>
+    </div>
+</div>
+<script type="text/javascript">
+    Vue.component('calculator', {
+        props: ['products','index','general','reelhref'],
+        data: function(){
+            return {
+                keywords: '',
+                choosen: false,
+                chooseTypeBool: false,
+                lengthTypes: ['км','м'],
+                lengthType: 'км',
+                length: '',
+                reelTypeBool: false,
+                reel: '',
+                results: [],
+                errors: [],
+                localReels: [
+                    {
+                        'id': 1,
+                        'name': 'катушка',
+                        'volume': 25,
+                        'weight': 20,
+                        'length': 5.3
+                    },
+                    {
+                        'id': 2,
+                        'name': 'катушка2',
+                        'volume': 15,
+                        'weight': 40,
+                        'length': 10
+                    },
+                    {
+                        'id': 3,
+                        'name': 'катушка3',
+                        'volume': 30,
+                        'weight': 25,
+                        'length': 6
+                    }
+                ],
+                reels: [
+                    {
+                        'id': 1,
+                        'name': 'катушка',
+                        'volume': 25,
+                        'weight': 20,
+                        'length': 5.3
+                    },
+                    {
+                        'id': 2,
+                        'name': 'катушка2',
+                        'volume': 15,
+                        'weight': 40,
+                        'length': 10
+                    },
+                    {
+                        'id': 3,
+                        'name': 'катушка3',
+                        'volume': 30,
+                        'weight': 25,
+                        'length': 6
+                    }
+                ],
+            }
+        },
+        watch: {
+            length(after,before){
+                if(this.lengthType == 'км'){
+                    this.products[this.index].reel.length = this.length;
+                    this.products[this.index].weight = (this.length * this.products[this.index].unit_weight ).toFixed(1) * 1;
+                    this.generalCount()
+                }else{
+                    this.products[this.index].reel.length = this.length / 1000;
+                    this.products[this.index].weight = (this.length / 1000 * this.products[this.index].unit_weight).toFixed(1) * 1;
+                    this.generalCount()
+                }
+            },
+            reel(after,before){
+                this.products[this.index].reel = this.reel;
+                this.length = this.reel.length;
+            },
+            keywords(after,before){
+              if(this.keywords.length > 2){
+                this.fetch();
+              }
+            }
+        },
+        methods:{
+            fetch() {
+                axios.get('/online-services/delivery/', { params: { q: this.keywords } })
+                    .then(response => {this.results = response.data == 'error' ? [] : response.data;})
+                    .catch(error => {
+                          this.errors.push(error);
+                          console.log(error);
+                    });
+            },
+            choose: function(cable,i,general){
+                this.products[this.index]['id'] = cable.id;
+                this.products[this.index]['title'] = cable.title;
+                this.products[this.index]['weight'] = (this.localReels[0].length * cable.unit_weight).toFixed(1) * 1;
+                this.products[this.index]['reel'] = this.localReels[0];
+                this.products[this.index]['volume'] = this.localReels[0].volume;
+                this.products[this.index]['unit_weight'] = cable.unit_weight;
+                this.products[this.index]['id'] = this.localReels[0].id;
+
+
+                this.keywords = this.products[this.index].title;
+                this.length = this.reels[0].length;
+                this.weight = this.products[this.index].reel.length * this.products[this.index].unit_weight;
+                this.unit_weight = this.products[this.index].unit_weight;
+                this.reel = this.products[this.index].reel;
+                this.volume = this.products[this.index].reel.volume;
+                this.id = this.products[this.index].id;
+                this.reelWeight = this.products[this.index].reel.reelWeight;
+                this.generalCount();
+                this.choosen = true;
+
+                this.reelhref.getid1 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 1){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[1]=' + this.products.reduce(function(p,c){let v = 1;if(c.getid == 1){return p * 1 + v;}else{return p;}},'') + '&' : '';
+
+                this.reelhref.getid2 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 2){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[2]=' +  this.products.reduce(function(p,c){let v = 1;if(c.getid == 2){return p * 1 + v;}else{return p;}},'') + '&' : '';
+
+                this.reelhref.getid3 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 3){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[3]=' + this.products.reduce(function(p,c){let v = 1;if(c.getid == 3){return p * 1 + v;}else{return p;}},'') : '';
+
+                this.reelhref.href = 'https://xn--80acmri6h.xn--80asehdb/raschet-zagruzki-transporta/?' + this.reelhref.getid1 + this.reelhref.getid2 + this.reelhref.getid3;
+            },
+            generalCount: function(){
+                this.general.length = this.products.reduce(function(p,c){return ((p * 1) + (c.reel.length * 1)).toFixed(1) * 1;},'');
+                this.general.weight = this.products.reduce(function(p,c){return ((p * 1) + (c.weight * 1)).toFixed(1);},'');
+                this.general.number = this.products.length;
+                this.general.volume = this.products.reduce(function(p,c){return (p * 1) + (c.volume * 1);},'');
+                this.general.net = this.products.reduce(function(p,c){return ((p * 1) + (c.weight * 1)).toFixed(1);},'');
+
+                let generalLength = this.lengthType == 'км' ? this.length : this.length / 1000;
+                let generalNumber = 1;
+                let generalVolume = generalNumber * this.products[this.index].volume;
+                let generalWeight = this.products[this.index].reel.weight;
+                let generalReelWeight = this.products[this.index].reel.weight;
+                let generalGross = (this.products[this.index].weight + generalReelWeight).toFixed(1) * 1;
+                this.general.cables[this.index] = {
+                    'cableName': this.products[this.index].title,
+                    'number': generalNumber,
+                    'volume': generalVolume,
+                    "weight": generalWeight,
+                    'gross': generalGross };
+                this.general.reelWeight = this.general.cables.reduce(function(p,c){return (p * 1) + (c.weight * 1);},'');
+                this.general.gross = this.general.cables.reduce(function(p,c){return (p * 1) + (c.gross * 1);},'');
+            },
+            openChooseType: function(){
+                this.chooseTypeBool = !this.chooseTypeBool;
+            },
+            openReelType: function(){
+                this.reelTypeBool = !this.reelTypeBool;
+            },
+            chooseReel: function(idx){
+                this.reel = this.localReels[idx];
+                this.products[this.index].reel = this.reel;
+                this.products[this.index].getid = this.reel.id;
+
+                this.reelhref.getid1 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 1){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[1]=' + this.products.reduce(function(p,c){let v = 1;if(c.getid == 1){return p * 1 + v;}else{return p;}},'') + '&' : '';
+
+                this.reelhref.getid2 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 2){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[2]=' +  this.products.reduce(function(p,c){let v = 1;if(c.getid == 2){return p * 1 + v;}else{return p;}},'') + '&' : '';
+
+                this.reelhref.getid3 =
+                    this.products.reduce(function(p,c){let v = 1;if(c.getid == 3){return p * 1 + v;}else{return p;}},'') != ''
+                        ? 'reel[3]=' + this.products.reduce(function(p,c){let v = 1;if(c.getid == 3){return p * 1 + v;}else{return p;}},'') : '';
+
+                this.reelhref.href = 'https://xn--80acmri6h.xn--80asehdb/raschet-zagruzki-transporta/?' + this.reelhref.getid1 +  this.reelhref.getid2  + this.reelhref.getid3;
+                this.reelTypeBool = false;
+            },
+            chooseType: function(type){
+                if(type == 'м' && this.lengthType != 'м'){
+                    this.length = this.length * 1000;
+                    this.products[this.index]['length'] = this.length;
+                }else if(type == 'км' && this.lengthType != 'км'){
+                    this.length = this.length / 1000;
+                    this.products[this.index]['length'] = this.length;
+                }
+                this.lengthType = type;
+                this.chooseTypeBool = false;
+            },
+            delCable: function(index){
+                this.products.splice(index,1);
+                this.general.cables.splice(index,1);
+                this.general.length = this.products.reduce(function(p,c){return ((p * 1) + (c.reel.length * 1)).toFixed(1) * 1;},'');
+                this.general.weight = this.products.reduce(function(p,c){return ((p * 1) + (c.weight * 1)).toFixed(1);},'');
+                this.general.number = this.products.length;
+                this.general.volume = this.products.reduce(function(p,c){return (p * 1) + (c.volume * 1);},'');
+                this.general.net = this.products.reduce(function(p,c){return ((p * 1) + (c.weight * 1)).toFixed(1);},'');
+                this.general.reelWeight = this.general.cables.reduce(function(p,c){return (p * 1) + (c.weight * 1);},'');
+                this.general.gross = this.general.cables.reduce(function(p,c){return (p * 1) + (c.gross * 1);},'');
+            },
+            onlyDigits() {
+              this.length = this.length.replace(/[^\d\.]/g, "");
+              if(this.length.match(/\./g).length > 1) {
+                this.length = this.length.substr(0, this.length.lastIndexOf("."));
+              }
+            }
+        },
+        template: `
+    <div v-bind:class="[choosen ? 'cp-disabled' : 'cp-able']" class="main-calc-block">
+      <div class="choose-product-block inpt-block">
+        <label for="cable-name">Марка кабеля с сечением</label>
+        <input type="text" v-model="keywords" v-on:input="choosen = false" class="choose-product calc-inpt" name="cable-name" autocomplete="off">
+        <ul v-if="results.length > 0" class="calc-select-list fast-search-list">
+          <li v-for="cable in results" :key="cable.id" v-text="cable.title" v-on:click="choose(cable,index,general);"></li>
+        </ul>
+      </div>
+      <div class="length-block inpt-block ab">
+        <label for="cable-length">Количество</label>
+        <input type="text" class="calc-inpt" v-model="length" name="cable-length" v-on:input="onlyDigits">
+        <div class="length-type" v-on:click="openChooseType">{{lengthType}}</div>
+        <ul class="length-types calc-select-list" v-if="chooseTypeBool">
+          <li v-for="type in lengthTypes" v-text="type" v-on:click="chooseType(type)"></li>
+        </ul>
+      </div>
+      <div class="weight-block inpt-block ab">
+        <label for="cable-weight">Вес, кг</label>
+        <input class="calc-inpt dis" v-model="this.products[index].weight" name="cable-weight">
+      </div>
+      <div class="reel-block inpt-block ab">
+        <label for="cable-reel">
+        Барабан
+        <a :href="reelhref.href" class="info-butt" target="_blank">
+        <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+        	 viewBox="0 0 23.625 23.625" style="enable-background:new 0 0 23.625 23.625;" xml:space="preserve">
+        <g>
+        	<path style="fill:#030104;" d="M11.812,0C5.289,0,0,5.289,0,11.812s5.289,11.813,11.812,11.813s11.813-5.29,11.813-11.813
+        		S18.335,0,11.812,0z M14.271,18.307c-0.608,0.24-1.092,0.422-1.455,0.548c-0.362,0.126-0.783,0.189-1.262,0.189
+        		c-0.736,0-1.309-0.18-1.717-0.539s-0.611-0.814-0.611-1.367c0-0.215,0.015-0.435,0.045-0.659c0.031-0.224,0.08-0.476,0.147-0.759
+        		l0.761-2.688c0.067-0.258,0.125-0.503,0.171-0.731c0.046-0.23,0.068-0.441,0.068-0.633c0-0.342-0.071-0.582-0.212-0.717
+        		c-0.143-0.135-0.412-0.201-0.813-0.201c-0.196,0-0.398,0.029-0.605,0.09c-0.205,0.063-0.383,0.12-0.529,0.176l0.201-0.828
+        		c0.498-0.203,0.975-0.377,1.43-0.521c0.455-0.146,0.885-0.218,1.29-0.218c0.731,0,1.295,0.178,1.692,0.53
+        		c0.395,0.353,0.594,0.812,0.594,1.376c0,0.117-0.014,0.323-0.041,0.617c-0.027,0.295-0.078,0.564-0.152,0.811l-0.757,2.68
+        		c-0.062,0.215-0.117,0.461-0.167,0.736c-0.049,0.275-0.073,0.485-0.073,0.626c0,0.356,0.079,0.599,0.239,0.728
+        		c0.158,0.129,0.435,0.194,0.827,0.194c0.185,0,0.392-0.033,0.626-0.097c0.232-0.064,0.4-0.121,0.506-0.17L14.271,18.307z
+        		 M14.137,7.429c-0.353,0.328-0.778,0.492-1.275,0.492c-0.496,0-0.924-0.164-1.28-0.492c-0.354-0.328-0.533-0.727-0.533-1.193
+        		c0-0.465,0.18-0.865,0.533-1.196c0.356-0.332,0.784-0.497,1.28-0.497c0.497,0,0.923,0.165,1.275,0.497
+        		c0.353,0.331,0.53,0.731,0.53,1.196C14.667,6.703,14.49,7.101,14.137,7.429z"/>
+        </g>
+        </svg></a>
+        </label>
+        <input class="calc-inpt dis" v-model="this.products[index].reel.name" name="cable-reel">
+        <div class="length-type" v-on:click="openReelType">
+        <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+           width="20px" height="18px" viewBox="0 0 511.626 511.626" style="enable-background:new 0 0 511.626 511.626;width: 15px;height: 15px;"
+           xml:space="preserve">
+        <g>
+          <g>
+            <path d="M63.953,164.453H9.135c-2.474,0-4.615,0.9-6.423,2.709C0.903,168.972,0,171.114,0,173.589v54.817
+              c0,2.473,0.903,4.619,2.712,6.424c1.809,1.803,3.949,2.712,6.423,2.712h54.818c2.474,0,4.615-0.905,6.423-2.712
+              c1.809-1.809,2.712-3.951,2.712-6.424v-54.817c0-2.475-0.904-4.617-2.712-6.427C68.568,165.356,66.427,164.453,63.953,164.453z"/>
+            <path d="M63.953,383.722H9.135c-2.474,0-4.615,0.896-6.423,2.707C0.903,388.238,0,390.378,0,392.854v54.82
+              c0,2.471,0.903,4.609,2.712,6.42c1.809,1.813,3.949,2.714,6.423,2.714h54.818c2.474,0,4.615-0.903,6.423-2.714
+              c1.809-1.807,2.712-3.949,2.712-6.42v-54.82c0-2.477-0.904-4.616-2.712-6.426C68.568,384.625,66.427,383.722,63.953,383.722z"/>
+            <path d="M63.953,274.082H9.135c-2.474,0-4.615,0.91-6.423,2.714S0,280.749,0,283.22v54.815c0,2.478,0.903,4.62,2.712,6.427
+              c1.809,1.808,3.949,2.707,6.423,2.707h54.818c2.474,0,4.615-0.896,6.423-2.707c1.809-1.807,2.712-3.949,2.712-6.427V283.22
+              c0-2.471-0.904-4.613-2.712-6.424C68.568,274.989,66.427,274.082,63.953,274.082z"/>
+            <path d="M63.953,54.817H9.135c-2.474,0-4.615,0.903-6.423,2.712S0,61.479,0,63.953v54.817c0,2.475,0.903,4.615,2.712,6.424
+              s3.949,2.712,6.423,2.712h54.818c2.474,0,4.615-0.9,6.423-2.712c1.809-1.809,2.712-3.949,2.712-6.424V63.953
+              c0-2.475-0.904-4.615-2.712-6.424C68.568,55.725,66.427,54.817,63.953,54.817z"/>
+            <path d="M502.49,383.722H118.771c-2.474,0-4.615,0.896-6.423,2.707c-1.809,1.81-2.712,3.949-2.712,6.426v54.82
+              c0,2.471,0.903,4.609,2.712,6.42c1.809,1.813,3.946,2.714,6.423,2.714H502.49c2.478,0,4.616-0.903,6.427-2.714
+              c1.81-1.811,2.71-3.949,2.71-6.42v-54.82c0-2.477-0.903-4.616-2.71-6.426C507.106,384.625,504.967,383.722,502.49,383.722z"/>
+            <path d="M502.49,274.082H118.771c-2.474,0-4.615,0.91-6.423,2.714s-2.712,3.953-2.712,6.424v54.815
+              c0,2.478,0.903,4.62,2.712,6.427c1.809,1.808,3.946,2.707,6.423,2.707H502.49c2.478,0,4.616-0.896,6.427-2.707
+              c1.81-1.807,2.71-3.949,2.71-6.427V283.22c0-2.471-0.903-4.613-2.71-6.424C507.106,274.992,504.967,274.082,502.49,274.082z"/>
+            <path d="M508.917,57.529c-1.811-1.805-3.949-2.712-6.427-2.712H118.771c-2.474,0-4.615,0.903-6.423,2.712
+              s-2.712,3.949-2.712,6.424v54.817c0,2.475,0.903,4.615,2.712,6.424s3.946,2.712,6.423,2.712H502.49c2.478,0,4.616-0.9,6.427-2.712
+              c1.81-1.809,2.71-3.949,2.71-6.424V63.953C511.626,61.479,510.723,59.338,508.917,57.529z"/>
+            <path d="M502.49,164.453H118.771c-2.474,0-4.615,0.9-6.423,2.709c-1.809,1.81-2.712,3.952-2.712,6.427v54.817
+              c0,2.473,0.903,4.615,2.712,6.424c1.809,1.803,3.946,2.712,6.423,2.712H502.49c2.478,0,4.616-0.905,6.427-2.712
+              c1.81-1.809,2.71-3.951,2.71-6.424v-54.817c0-2.475-0.903-4.617-2.71-6.427C507.106,165.356,504.967,164.453,502.49,164.453z"/>
+          </g>
+        </g>
+        </svg>
+        </div>
+        <ul class="teel-types calc-select-list" v-if="reelTypeBool">
+          <li v-for="(item,idx) in reels" v-text="item.name" v-on:click="chooseReel(idx)"></li>
+        </ul>
+      </div>
+      <div class="volume-block inpt-block ab">
+        <label for="cable-volume">Объем</label>
+        <input class="calc-inpt dis" v-model="this.products[index].reel.volume" name="cable-volume">
+      </div>
+      <div class="reelWeight-block inpt-block ab">
+        <label for="cable-reelWeight">Вес барабана</label>
+        <input class="calc-inpt dis" v-model="this.products[index].reel.weight" name="cable-reelWeight">
+      </div>
+      <div>
+        <a class="del-cable" v-on:click="delCable(index)"></a>
+      </div>
+    </div>`
+    });
+    let deliveryCalc = new Vue({
+        el: '#cables-calc',
+        data: {
+            products: [{"id": 0,"title": '',"weight":0,'reel': 0,'volume': 0,"unit_weight": 0,'uniqid': 0, 'getid': 1}],
+            general: {"length": 0,"cableWeight": 0, "reelWeight": 0, 'net': 0, 'cables': [{'cableName': '','number': 0,'volume': 0,"weight": 0,'gross': 0}], 'volume' : 0, "gross": 0},
+            reelhref: {'href': '', 'params': '', 'getid1': '', 'getid2': '', 'getid3': ''},
+            uniqid: 1,
+        },
+        methods: {
+            addCable: function(){
+                this.products.push({
+                "id": 0,
+                "title": '',
+                "weight":0,
+                'reel': {'id': 1,'name': 'катушка','volume': 0,'weight': 0,'length': 0},
+                'volume': 0,
+                "unit_weight": 0,
+                'uniqid': this.uniqid++,
+                'getid': 1});
+            },
+        }
+    });
+</script>
+<style media="screen">
+    #cables-calc{
+        margin-top: 40px;
+    }
+    #cables-calc .btn-yellow{
+        margin-top: 0;
+    }
+    #cables-calc .btn-yellow:active{
+        margin-top: 0;
+    }
+    .calc-result-block{
+        margin-top: 50px;
+    }
+    .general-table{
+        display: flex;
+        flex-direction: column;
+        height: 120px;
+        flex-wrap: wrap;
+        align-content: space-between;
+        justify-content: space-between;
+        width: 550px;
+    }
+    .info-butt svg{
+        width: 13px;
+        height: 13px;
+    }
+    .send-cables{
+        margin-top: 20px;
+    }
+    .calc-result-table{
+        border: 1px solid #ececec;
+        margin-bottom: 20px;
+    }
+    .calc-result-table td{
+        width: 200px;
+        padding: 10px 15px 10px 15px;
+        border-right: 1px solid #ececec;
+    }
+    .calc-result-table tr{
+        border-bottom: 1px solid #ececec;
+    }
+    .calc-result-table .long{
+        width: 260px;
+    }
+    .del-cable{
+        display: inline-block;
+        background: url(/images/icons/icon_cart_del.png) no-repeat 0 0 transparent;
+        width: 17px;
+        height: 17px;
+        background-position: 0 0;
+        cursor: pointer;
+        margin-top: 37px;
+        margin-left: 10px;
+    }
+    .reelWeight-block{
+        width: 150px;
+    }
+    .reel-block{
+        width: 150px;
+    }
+    .volume-block{
+        width: 150px;
+    }
+    .weight-block{
+        width: 150px;
+    }
+    .cp-able .ab{
+        pointer-events: none;
+    }
+    .length-type{
+        width: 35px;
+        height: 30px;
+        position: absolute;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        right: 5px;
+        top: 33px;
+        border: 1px solid #ececec;
+        cursor: pointer;
+        padding-bottom: 0;
+        font-size: 14px;
+        border-radius: 5px;
+        background-color: #fff;
+    }
+    .inpt-block{
+        margin-right: 10px;
+        position: relative;
+    }
+    .inpt-block input{
+        padding-right: 10px;
+    }
+    .inpt-block label{
+        font-weight: 400;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    .length-block{
+        width: 150px;
+    }
+    .main-calc-block{
+        display: flex;
+        margin-bottom: 20px;
+    }
+    .choose-product{
+        width: 100%;
+    }
+    .choose-product-block{
+        width: 300px;
+    }
+    .calc-inpt{
+        height: 40px;
+        border: 1px solid #d4d4d4;
+        border-radius: 5px;
+        padding-left: 10px;
+        outline: none;
+        width: 100%;
+    }
+    .cp-disabled .dis{
+        pointer-events: none;
+    }
+    .cp-disabled .fast-search-list{
+        display: none;
+        top: 66px;
+        width: 100%;
+    }
+    .fast-search-list{
+        max-height: 203px;
+        overflow: auto;
+    }
+    .cp-disabled .disabled-inpt{
+        pointer-events: none;
+    }
+    .calc-select-list{
+        position: absolute;
+        top: 66px;
+        border-radius: 5px;
+        padding: 0;
+        border: 1px solid #ececec;
+        background-color: #fff;
+        width: 100%;
+        z-index: 1000;
+    }
+    .calc-select-list li:first-child{
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+    }
+    .calc-select-list li:last-child{
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+    }
+    .calc-select-list li{
+        cursor: pointer;
+        list-style: none;
+        height: 40px;
+        display: flex;
+        padding-left: 10px;
+        align-items: center;
+        border-bottom: 1px solid #ececec;
+        transition: all .1s;
+    }
+    .calc-select-list li:hover{
+        background-color: #ffa500;
+        color: #fff;
+    }
+</style>
