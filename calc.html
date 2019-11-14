@@ -124,11 +124,6 @@
                 this.generalCount();
                 this.choosen = true;
 
-
-
-                this.reelhref.params = this.cdres.reduce(function(p,c){return p  + 'reel[' + c.id + ']='+c.count+'&';},'');
-
-                this.reelhref.href = 'https://xn--80acmri6h.xn--80asehdb/raschet-zagruzki-transporta/?' + this.reelhref.params;
                 this.rechoose = true;
             },
             generalCount: function(){
@@ -156,10 +151,6 @@
                 this.choosendrums[this.index] = this.reel.id + '_' + this.reel.name;
 
                 deliveryCalc.countReels();
-
-                this.reelhref.params = this.cdres.reduce(function(p,c){return p  + 'reel[' + c.id + ']='+c.count+'&';},'');
-
-                this.reelhref.href = 'https://xn--80acmri6h.xn--80asehdb/raschet-zagruzki-transporta/?' + this.reelhref.params;
                 this.reelTypeBool = false;
             },
             chooseType: function(type){
@@ -185,6 +176,10 @@
                 this.general.net = this.products.reduce(function(p,c){return ((p * 1) + (c.weight * 1)).toFixed(1);},'');
                 this.general.reelWeight = this.products.reduce(function(p,c){return (p * 1) + (c.reel.weight * 1);},'');
                 this.general.gross = this.products.reduce(function(p,c){return (p * 1) + (c.weight * 1);},'') + this.products.reduce(function(p,c){return (p * 1) + (c.reel.weight * 1);},'');
+                this.choosendrums.splice(index,1);
+
+                deliveryCalc.countReels();
+
             },
             onlyDigits() {
               this.length = this.length.replace(/[^\d\.]/g, "");
@@ -330,6 +325,8 @@
                   res.push({'id': elId, 'count': counts[el], 'name': elName});
               });
               this.cdres = res;
+              this.reelhref.params = this.cdres.reduce(function(p,c){return p  + 'reel[' + c.id + ']='+c.count+'&';},'');
+              this.reelhref.href = 'https://xn--80acmri6h.xn--80asehdb/raschet-zagruzki-transporta/?' + this.reelhref.params;
             }
         }
     });
