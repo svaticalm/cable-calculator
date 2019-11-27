@@ -4,7 +4,7 @@
 
 [Смотреть здесь](http://co.demoport.ru/online-services/delivery/)
 
-![calc-screenshot](https://downloader.disk.yandex.ru/preview/b6f4d9267ec8b9862c81ff5022b843463d72f9c3d8ec3a543228645cceee7b6d/5dc9c3e4/E-3TdxUpOM6KoBDDEEPl68XGQUVZ5DlMITufrzhX5DV4Ah7wmOP3-gS7dBihQ4SPoZAJRCbLafF0qxS6xN9R8g==?uid=0&filename=2019-11-11_21-24-08.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&tknv=v2&owner_uid=212496563&size=2048x2048)
+![calc-screenshot](https://avatars.mds.yandex.net/get-pdb/1568972/ea0ab3ed-00a3-4bcb-b292-acd718857dd3/s1200)
 
 
 ## Используемые технологии
